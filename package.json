@@ -1,0 +1,7 @@
+{
+  "name": "achetezeasy-apercu",
+  "version": "2.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Aperçu du site Achetez Easy (démonstration). Fichiers statiques + fonctions de relais."
+}
