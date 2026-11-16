@@ -12,7 +12,8 @@ le vrai site reste hébergé sur OVH (dossier `dist/` du projet).
 3. Framework : **Other**. Laisser les réglages par défaut.
 4. **Avant / après le déploiement, ajouter une variable d’environnement :**
    - Nom : `CATALOGUE_SOURCE`
-   - Valeur : `https://admin-test.achetezeasy.fr/catalogue-public.php`
+   - Valeur : l’adresse du catalogue public du back-office (à demander à
+     l’administrateur ; ne jamais l’écrire dans ce dépôt, qui est public)
    - Puis **redéployer** pour qu’elle soit prise en compte.
 5. L’URL d’aperçu (`…vercel.app`) est prête à être partagée.
 

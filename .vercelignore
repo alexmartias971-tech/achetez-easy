@@ -1,0 +1,4 @@
+# Fichiers du dépôt qui ne doivent pas être publiés sur l'aperçu Vercel.
+LISEZ-MOI-APERCU.md
+*.md
+.git

@@ -12,6 +12,11 @@ const PHOTO = /^\/?photos\.php\?p=[A-Za-z0-9%._/-]{1,300}$/;
 const ID = /^[A-Za-z0-9_-]{1,40}$/;
 const TTL = 10 * 60 * 1000;
 const cache = new Map();
+const pending = new Map();
+// Prix fournisseur ajoutés en fin de libellé, ex. « Peinture métallisée[900] ».
+// Tout segment entre crochets contenant un chiffre est retiré, quel que soit son
+// format (« [1 234,56 €] », « [-500] »…), avant toute troncature du texte.
+const BRACKET_PRICE = /\s*\[[^\]]*\d[^\]]*\]/g;
 
 const text = (v, max = 200) => {
   if (typeof v !== 'string' && typeof v !== 'number') return '';
@@ -23,12 +28,12 @@ const text = (v, max = 200) => {
     .slice(0, max);
 };
 
-function list(value, maxItems, maxLength, strip = false) {
+function list(value, maxItems, maxLength) {
   if (!Array.isArray(value)) return [];
   const out = [];
   for (const item of value) {
-    let s = text(item, maxLength);
-    if (strip) s = s.replace(/\s*\[[\d\s.,]*\]\s*$/, '').trim();
+    const raw = typeof item === 'string' || typeof item === 'number' ? String(item) : '';
+    const s = text(raw.replace(BRACKET_PRICE, ''), maxLength);
     if (s) out.push(s);
     if (out.length >= maxItems) break;
   }
@@ -69,8 +74,8 @@ function clean(raw) {
     price: Math.round(price * 100) / 100,
     photos: photos(raw.photos, 30),
     equipments: list(raw.equipments || raw.equipment, 200, 400),
-    options: list(raw.options, 120, 300, true),
-    packs: list(raw.packs, 60, 300, true),
+    options: list(raw.options, 120, 300),
+    packs: list(raw.packs, 60, 300),
   };
 }
 
@@ -80,10 +85,19 @@ const summary = (v) => ({
   price: v.price, photos: v.photos.slice(0, 2),
 });
 
-async function load(code) {
+// Un seul appel au back-office à la fois par territoire : les requêtes
+// simultanées attendent la même réponse au lieu de multiplier les appels.
+function load(code) {
   const hit = cache.get(code);
-  if (hit && Date.now() - hit.time < TTL) return hit;
-  if (!SOURCE) return hit || null;
+  if (hit && Date.now() - hit.time < TTL) return Promise.resolve(hit);
+  if (!SOURCE) return Promise.resolve(hit || null);
+  if (!pending.has(code)) {
+    pending.set(code, fetchCatalogue(code, hit).finally(() => pending.delete(code)));
+  }
+  return pending.get(code);
+}
+
+async function fetchCatalogue(code, hit) {
   const sep = SOURCE.includes('?') ? '&' : '?';
   try {
     const res = await fetch(`${SOURCE}${sep}territory=${encodeURIComponent(code)}`, {
